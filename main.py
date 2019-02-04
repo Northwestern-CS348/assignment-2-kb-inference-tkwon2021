@@ -7,7 +7,7 @@ class KBTest(unittest.TestCase):
 
     def setUp(self):
         # Assert starter facts
-        file = 'statements_kb4.txt'
+        file = 'statements_kb3.txt'
         self.data = read.read_tokenize(file)
         data = read.read_tokenize(file)
         self.KB = KnowledgeBase([], [])
@@ -15,6 +15,8 @@ class KBTest(unittest.TestCase):
             if isinstance(item, Fact) or isinstance(item, Rule):
                 self.KB.kb_assert(item)
         
+    
+    '''
     def test1(self):
         # Did the student code contain syntax errors, AttributeError, etc.
         ask1 = read.parse_input("fact: (motherof ada ?X)")
@@ -29,6 +31,14 @@ class KBTest(unittest.TestCase):
         answer = self.KB.kb_ask(ask1)
         self.assertEqual(str(answer[0]), "?X : felix")
         self.assertEqual(str(answer[1]), "?X : chen")
+
+    def test2_1(self):
+        # Can fc_infer actually infer (again, this time with auntof)
+        ask1 = read.parse_input("fact: (auntof eva ?X)")
+        print(' Asking if', ask1)
+        answer = self.KB.kb_ask(ask1)
+        self.assertEqual(str(answer[0]), "?X : bing")
+        
 
     def test3(self):
         # Does retract actually retract things 
@@ -69,7 +79,39 @@ class KBTest(unittest.TestCase):
         self.KB.kb_retract(r1)
         print(' Asking if', ask1)
         answer = self.KB.kb_ask(ask1)
-        self.assertEqual(str(answer[0]), "?X : bing")
+        self.assertEqual(str(answer[0]), "?X : bing")  
+
+        '''
+
+    # Use statements_kb3.txt
+    def test7(self):
+        # Can fc_infer actually infer
+        ask1 = read.parse_input("fact: (goodman ?X)")
+        print(' Asking if', ask1)
+        answer = self.KB.kb_ask(ask1)
+        self.assertEqual(str(answer[0]), "?X : a")
+
+        # Is fact still inferred after taking away the assertion?
+        r1 = read.parse_input("fact: (goodman a)")
+        print(' Retracting', r1)
+        self.KB.kb_retract(r1)
+
+        print(' Asking if', ask1)
+        answer = self.KB.kb_ask(ask1)
+        self.assertEqual(str(answer[0]), "?X : a")
+
+        # Is fact removed after taking away support and assertion?
+        r2 = read.parse_input("fact: (person a)")
+        print(' Retracting', r2)
+        self.KB.kb_retract(r2)
+
+        print(' Asking if', ask1)
+        answer = self.KB.kb_ask(ask1)
+        self.assertEqual(str(len(answer)), '0')
+
+
+
+
 
 
 def pprint_justification(answer):

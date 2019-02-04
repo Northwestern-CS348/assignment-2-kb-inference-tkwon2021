@@ -128,6 +128,94 @@ class KnowledgeBase(object):
         printv("Retracting {!r}", 0, verbose, [fact])
         ####################################################
         # Student code goes here
+
+        # Fact must be declared in the scope of the entire function to ensure
+        # we are always operating on a fact in the KB
+        kb_fact = None
+
+        # If fact is a Fact object
+        if isinstance(fact, Fact):
+            
+            # Check if any facts in KB are equal to fact
+            for fact_to_retract in self.facts:
+                if fact_to_retract == fact:
+                    kb_fact = fact_to_retract
+
+                    # If not in KB, return
+                    if not kb_fact:
+                        return
+
+                    # If a match is found, change the asserted field
+                    if len(kb_fact.supported_by) != 0:
+                        kb_fact.asserted = False
+                        return
+
+                    # If there is no support, then remove the fact from KB
+                    elif len(kb_fact.supported_by) == 0:
+                        self.facts.remove(kb_fact)
+                
+
+        # If rule is a Rule object
+        elif isinstance(fact, Rule):
+
+            # Check if any rules in KB are equal to fact
+            for fact_to_retract in self.rules:
+                if fact_to_retract == fact:
+                    kb_fact = fact_to_retract
+
+                    # If not in KB, return 
+                    if not kb_fact:
+                        return
+
+                    # If there is support for fact, return
+                    if len(kb_fact.supported_by) != 0:
+                        return
+
+                    # If the fact is asserted, return
+                    if kb_fact.asserted:
+                        return
+
+                    # If not asserted and no support, remove from KB
+                    self.rules.remove(kb_fact)
+                
+        # Now checking facts that the fact supports
+        for supported_fact in kb_fact.supports_facts:
+            pair = None
+
+            # Finding a supported_by pair that contains the removed fact
+            for fr_pair in supported_fact.supported_by:
+                if kb_fact in fr_pair:
+                    pair = fr_pair
+
+            # Removing the supported by pair in the facts that were supported by the removed fact
+            for fact in self.facts:
+                if fact == supported_fact:
+                    fact.supported_by.remove(pair)
+            
+            # Recursive call to make sure all facts that aren't asserted or inferred are removed
+            self.kb_retract(supported_fact) 
+        
+
+        # Now checking rules that the fact supports
+        for supported_rule in kb_fact.supports_rules:
+            pair = None
+
+            # Finding a support_by pair that contains the removed fact
+            for fr_pair in supported_rule.supported_by:
+                if kb_fact in fr_pair:
+                    pair = fr_pair
+
+            # Removing the supported_by pair in the rules that were supported by the removed fact
+            for rule in self.rules:
+                if rule == supported_rule:
+                    rule.supported_by.remove(pair)
+
+            # Recursive call to make sure all rules that aren't asserted or inferred are removed
+            self.kb_retract(supported_rule)
+
+
+
+
         
 
 class InferenceEngine(object):
@@ -146,3 +234,44 @@ class InferenceEngine(object):
             [fact.statement, rule.lhs, rule.rhs])
         ####################################################
         # Student code goes here
+
+        # Binding for the fact and the first element of the LHS of the rule
+        matchedBinding = match(fact.statement, rule.lhs[0])
+
+
+        if matchedBinding != False:
+
+            # Check if LHS has only one element; if so, we are asserting a fact
+            if len(rule.lhs) == 1:
+
+                # Create the fact using the instantiation of the statment
+                f1 = Fact(instantiate(rule.rhs, matchedBinding), [[fact, rule]])
+                kb.kb_assert(f1)
+
+                # Add the newly created fact to the supports_fact lists
+                fact.supports_facts.append(f1)
+                rule.supports_facts.append(f1)
+            
+            # If more than one element in LHS, we are asserting a rule with
+            # rest of the elements of the LHS (exluding the first) as the new
+            # LHS
+            else :
+                lhsList = []
+
+                # Start at 1 since we want to exclude the first elements (element 0)
+                for state in rule.lhs[1:]:
+                    lhsList.append(instantiate(state, matchedBinding))
+
+                # Create the RHS statement
+                rhsStatement = instantiate(rule.rhs, matchedBinding)
+
+                # Create the LHS list (list of statements)
+                statementList = [lhsList, rhsStatement]
+
+                # Create the rule using the list of statements we just created
+                r1 = Rule(statementList, [[fact, rule]])
+                kb.kb_assert(r1)
+
+                # Add the newly created rule to the supports_rule lists
+                fact.supports_rules.append(r1)
+                rule.supports_rules.append(r1)
